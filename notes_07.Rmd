@@ -1,0 +1,257 @@
+---
+title: "Spatial data visualization"
+author: ""
+date: ""
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+## Main ideas
+
+- Spatial data is important
+  - exploratory data analysis
+  - detecting spatial patterns and trends
+  - understanding spatial data relationships
+  - analysis of spatial data should reflect spatial structure
+
+## Keyboard shortcuts
+
+| **Task / function**  | **Windows & Linux** | **macOS**           |
+|----------------------|---------------------|---------------------|
+| Insert R chunk       | Ctrl+Alt+I          | Command+Option+I    |
+| Knit document        | Ctrl+Shift+K        | Command+Shift+K     |
+| Run current line     | Ctrl+Enter          | Command+Enter       |
+| Run current chunk    | Ctrl+Shift+Enter    | Command+Shift+Enter |
+| Run all chunks above | Ctrl+Alt+P          | Command+Option+P    |
+| `<-`                 | Alt+-               | Option+-            |
+| `%>%`                | Ctrl+Shift+M        | Command+Shift+M     |
+
+## Packages
+
+```{r load-packages, message = FALSE}
+library(tidyverse)
+library(sf)
+```
+
+## Lecture notes and exercises
+
+**Spatial data is different**
+
+Our typical "tidy" dataframe.
+
+```{r tidy-data}
+mpg
+```
+
+A simple feature object.
+
+```{r sf-data}
+nc <- st_read("data/nc_covid.shp", quiet = TRUE)
+nc
+```
+
+**Question:** What differences do you observe when comparing a typical tidy
+data frame to the new simple feature object?
+
+### Simple features
+
+A **simple feature** is a standard, formal way to describe how real-world 
+spatial objects (country, building, tree, road, etc) can be represented by a 
+computer. 
+
+The `sf` package implements simple features and other spatial functionality 
+using **tidy** principles. Simple features have a geometry type. Common choices
+are shown in the slides associated with today's lecture. 
+
+Simple features are stored in a data frame, with the geographic information 
+in a column called `geometry`. Simple features can contain both spatial and
+non-spatial data.
+
+The main functions in the `sf` package begin with `st_`.
+
+### `sf` and `geom_sf()`
+
+Notice `nc` contains both spatial and non-spatial information.
+
+We can build up a visualization layer-by-layer beginning with `ggplot`. Let's 
+start by making a basic plot of North Carolina counties.
+
+```{r plot-1, fig.width=10, fig.height=4}
+ggplot(nc) +
+  geom_sf() +
+  labs(title = "North Carolina counties")
+```
+
+Now adjust the theme with `theme_bw()`.
+
+```{r plot-2, fig.width=10, fig.height=4}
+ggplot(nc) +
+  geom_sf() +
+  labs(title = "North Carolina counties with theme") + 
+  theme_bw()
+```
+
+Now adjust `color` in `geom_sf` to change the color of the county borders.
+
+```{r plot-3, fig.width=10, fig.height=4}
+ggplot(nc) +
+  geom_sf(color = "darkgreen") +
+  labs(title = "North Carolina counties with theme and aesthetics") + 
+  theme_bw() 
+```
+
+Then increase the width of the county borders using `size`.
+
+```{r plot-4, fig.width=10, fig.height=4}
+ggplot(nc) +
+  geom_sf(color = "darkgreen", size = 1.5) +
+  labs(title = "North Carolina counties with theme and aesthetics") +
+  theme_bw()
+```
+
+Fill the counties by specifying a `fill` argument.
+
+```{r plot-5, fig.width=10, fig.height=4}
+ggplot(nc) +
+  geom_sf(color = "darkgreen", size = 1.5, fill = "orange") +
+  labs(title = "North Carolina counties with theme and aesthetics") +
+  theme_bw()
+```
+
+Finally, adjust the transparency using `alpha`.
+
+```{r plot-6, fig.width=10, fig.height=4}
+ggplot(nc) +
+  geom_sf(color = "darkgreen", size = 1.5, fill = "orange", alpha = 0.50) +
+  labs(title = "North Carolina counties with theme and aesthetics") +
+  theme_bw()
+```
+
+Our current map is a bit much. Adjust `color`, `size`, `fill`, and `alpha` until
+you have a map that effectively displays the counties of North Carolina.
+
+### North Carolina COVID-19 Mapping
+
+The `nc` data was pulled from the [New York Times COVID-19 Dashboard](https://www.nytimes.com/interactive/2020/us/north-carolina-coronavirus-cases.html) 
+as of 02-04-2021.
+
+The dataset contains the following variables on all North Carolina counties:
+
+- `county`: county name
+- `cases`: total number of COVID-19 cases
+- `deaths`: total number of COVID-19 deaths
+- `case100`: number of COVID-19 cases per 100,000
+- `death100`: number of COVID-19 deaths per 100,000
+
+Let's use the COVID-19 data to generate a **choropleth map**.
+
+```{r covid-plot-1, fig.width=10, fig.height=4}
+ggplot(nc) +
+  geom_sf(aes(fill = cases)) + 
+  labs(title = "Higher population counties have more COVID-19 cases",
+       fill = "# cases") + 
+  theme_bw() 
+```
+
+It is best to choose your own color palette. A great resource is
+[colorbrewer2](http://colorbrewer2.org/#type=sequential&scheme=BuGn&n=3).
+
+One way to set fill colors is with `scale_fill_gradient()`.
+
+```{r covid-plot-2, fig.width=10, fig.height=4}
+ggplot(nc) +
+  geom_sf(aes(fill = cases)) +
+  scale_fill_gradient(low = "#fee8c8", high = "#7f0000") +
+  labs(title = "Higher population counties have more COVID-19 cases",
+       fill = "# cases") + 
+  theme_bw() 
+```
+
+**Question:** Is the above visualization informative? Why or why not?
+
+```{r fig.width=10, fig.height=4}
+ggplot(nc) +
+  geom_sf(aes(fill = case100)) +
+  scale_fill_gradient(low = "#fff7f3", high = "#49006a") +
+  labs(title = "COVID-19 cases per 100,000") +
+  theme_bw()
+```
+
+### Challenges
+
+1. Different types of data exist (raster and vector).
+
+2. The coordinate reference system (CRS) matters.
+
+3. Manipulating spatial data objects is similar, but not identical to
+   manipulating data frames. 
+
+### `dplyr`
+
+The `sf` package plays nicely with our earlier data wrangling functions from 
+`dplyr`.
+
+## `select()`
+
+```{r sf-and-select}
+nc %>% 
+  select(deaths, death100)
+```
+
+## `filter()`
+
+```{r sf-and-filter}
+nc %>% 
+  filter(deaths > 100)
+```
+
+## `summarize()`
+
+```{r sf-and-summarize}
+nc %>% 
+  summarize(total_deaths  = sum(deaths),
+            total_cases   = sum(cases))
+```
+
+**Question:** Does the above geometry have any meaning?
+
+Geometries are "sticky". They are kept until deliberately dropped using 
+`st_drop_geometry`.
+
+```{r drop-geometry}
+nc %>% 
+  select(county, deaths) %>% 
+  filter(deaths > 100) %>% 
+  st_drop_geometry()
+```
+
+## Practice
+
+(1) Construct an effective visualization investigating the spatial distribution
+of COVID-19 deaths in North Carolina. Carefully consider aesthetics and choose 
+your own color palette using colorbrewer2.
+
+```{r practice-1}
+
+```
+
+(2) Which counties have a relatively large number of deaths given their case 
+count? Which counties have a relatively small number of deaths given their 
+case count? Construct an effective visualization to answer this question and 
+carefully consider all aesthetic choices.
+
+```{r practice-2}
+
+```
+
+(3) What are limitations of your visualizations above?
+
+
+
+## Additional Resources
+
+- [Simple features in `R`](https://r-spatial.github.io/sf/)
+- [Coordinate references systems](https://www.nceas.ucsb.edu/sites/default/files/2020-04/OverviewCoordinateReferenceSystems.pdf)
+- [Geographic data in `R`](https://geocompr.robinlovelace.net/spatial-class.html)
+- [Leaflet for `R`](https://rstudio.github.io/leaflet/)
